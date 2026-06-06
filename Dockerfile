@@ -27,8 +27,10 @@ COPY --chown=nonroot:nonroot garmincapture/ ./garmincapture/
 ENV PATH="/app/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin" \
     PYTHONUNBUFFERED=1
 
-# /app/data holds both BRONZE_ROOT and the garminconnect token store as mounted subdirs.
-VOLUME ["/app/data"]
+# No VOLUME for /app/data: BRONZE_ROOT and the token store are always supplied as
+# explicit bind mounts on the subdirs (see compose.yml). Declaring the parent as a
+# VOLUME only forces a throwaway anonymous volume on every run, since nothing is
+# ever mounted at /app/data itself.
 
 USER nonroot
 

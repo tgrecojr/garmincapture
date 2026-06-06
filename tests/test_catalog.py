@@ -35,6 +35,27 @@ class TestAllowlist:
     def test_hrv_skips_on_none(self):
         assert catalog.get("hrv").skip_if_none is True
 
+    def test_added_endpoints_present(self):
+        """Endpoints adopted from a library-drift review must be in the catalog."""
+        added = {
+            "cycling_ftp", "device_alarms", "available_badges", "in_progress_badges",
+            "morning_training_readiness", "activities_fordate",
+        }
+        assert added <= {ep.name for ep in catalog.CATALOG}
+
+
+class TestRedundancySuppression:
+    def test_redundant_disjoint_from_catalog(self):
+        """A method is either captured or marked redundant — never both."""
+        assert catalog._KNOWN_REDUNDANT.isdisjoint(catalog.catalog_method_names())
+
+    def test_redundant_methods_not_reported_as_drift(self):
+        """Suppressed aliases/subsets must not re-appear as drift each startup."""
+        from garminconnect import Garmin
+
+        drift = catalog.detect_catalog_drift(Garmin)
+        assert catalog._KNOWN_REDUNDANT.isdisjoint(drift)
+
 
 class TestDriftDetection:
     class _FakeGarmin:
