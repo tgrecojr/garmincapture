@@ -82,6 +82,8 @@ _DAILY: tuple[Endpoint, ...] = (
     Endpoint("hydration", "get_hydration_data", KIND_DAILY, "hydration"),
     Endpoint("hrv", "get_hrv_data", KIND_DAILY, "hrv", skip_if_none=True),
     Endpoint("training_readiness", "get_training_readiness", KIND_DAILY, "training_readiness"),
+    # Morning Report score (inputContext == AFTER_WAKEUP_RESET); distinct payload.
+    Endpoint("morning_training_readiness", "get_morning_training_readiness", KIND_DAILY, "morning_training_readiness", skip_if_none=True),
     Endpoint("training_status", "get_training_status", KIND_DAILY, "training_status"),
     Endpoint("max_metrics", "get_max_metrics", KIND_DAILY, "max_metrics"),  # VO2max
     Endpoint("fitness_age", "get_fitnessage_data", KIND_DAILY, "fitness_age"),
@@ -91,6 +93,8 @@ _DAILY: tuple[Endpoint, ...] = (
     Endpoint("nutrition_food_log", "get_nutrition_daily_food_log", KIND_DAILY, "nutrition_food_log", skip_if_empty=True),
     Endpoint("nutrition_meals", "get_nutrition_daily_meals", KIND_DAILY, "nutrition_meals", skip_if_empty=True),
     Endpoint("nutrition_settings", "get_nutrition_daily_settings", KIND_DAILY, "nutrition_settings", skip_if_empty=True),
+    # Per-day activities dashboard rollup (distinct URL/payload from the range pull).
+    Endpoint("activities_fordate", "get_activities_fordate", KIND_DAILY, "activities_fordate", skip_if_empty=True),
 )
 
 _RANGE: tuple[Endpoint, ...] = (
@@ -117,10 +121,12 @@ _WEEKLY: tuple[Endpoint, ...] = (
 _STATIC: tuple[Endpoint, ...] = (
     Endpoint("race_predictions", "get_race_predictions", KIND_STATIC, "race_predictions"),
     Endpoint("lactate_threshold", "get_lactate_threshold", KIND_STATIC, "lactate_threshold"),
+    Endpoint("cycling_ftp", "get_cycling_ftp", KIND_STATIC, "cycling_ftp", skip_if_empty=True),
     Endpoint("pregnancy_summary", "get_pregnancy_summary", KIND_STATIC, "pregnancy_summary", skip_if_empty=True),
     Endpoint("devices", "get_devices", KIND_STATIC, "devices"),
     Endpoint("device_last_used", "get_device_last_used", KIND_STATIC, "device_last_used"),
     Endpoint("primary_device", "get_primary_training_device", KIND_STATIC, "primary_device"),
+    Endpoint("device_alarms", "get_device_alarms", KIND_STATIC, "device_alarms", skip_if_empty=True),
     Endpoint("user_settings", "get_user_profile", KIND_STATIC, "user_settings", screen_secrets=True),
     Endpoint("userprofile_settings", "get_userprofile_settings", KIND_STATIC, "userprofile_settings", screen_secrets=True),
     Endpoint("activity_types", "get_activity_types", KIND_STATIC, "activity_types"),
@@ -128,6 +134,8 @@ _STATIC: tuple[Endpoint, ...] = (
     Endpoint("training_plans", "get_training_plans", KIND_STATIC, "training_plans"),
     Endpoint("workouts", "get_workouts", KIND_STATIC, "workouts"),
     Endpoint("earned_badges", "get_earned_badges", KIND_STATIC, "earned_badges", skip_if_empty=True),
+    Endpoint("available_badges", "get_available_badges", KIND_STATIC, "available_badges", skip_if_empty=True),
+    Endpoint("in_progress_badges", "get_in_progress_badges", KIND_STATIC, "in_progress_badges", skip_if_empty=True),
     Endpoint("goals", "get_goals", KIND_STATIC_GOALS, "goals"),
 )
 
@@ -213,6 +221,21 @@ _KNOWN_PLUMBING: frozenset[str] = frozenset({
     "download", "modern_url", "garmin_connect_user_settings",
 })
 
+# Readable getters we deliberately DO NOT capture because they are pure aliases,
+# derived/merged views, or strict subsets of data the catalog already captures.
+# Subtracted from drift output so the warning keeps meaning "genuinely new data"
+# rather than re-flagging these every startup. Verified against the library source:
+#   get_stats          -> returns self.get_user_summary(cdate)            (alias)
+#   get_stats_and_body -> merges get_stats + get_body_composition         (derived view)
+#   get_stress_data    -> same daily_stress URL as get_all_day_stress     (duplicate endpoint)
+#   get_activities     -> offset/limit pagination of get_activities_by_date (overlapping)
+#   get_last_activity  -> get_activities(0, 1)                            (subset)
+# A unit test asserts this set is disjoint from the catalog (never both).
+_KNOWN_REDUNDANT: frozenset[str] = frozenset({
+    "get_stats", "get_stats_and_body", "get_stress_data",
+    "get_activities", "get_last_activity",
+})
+
 
 def _is_readable_candidate(name: str) -> bool:
     """A public method that *looks* like a data getter we might want to capture."""
@@ -229,10 +252,11 @@ def detect_catalog_drift(garmin_cls) -> list[str]:
     """Report readable library methods not covered by the catalog.
 
     Introspects ``garmin_cls`` (the ``garminconnect.Garmin`` class) for public
-    ``get_*``/``download_*`` methods that are neither in our allowlist nor in the
-    known plumbing/dangerous sets. The result is a list of endpoints a library
-    upgrade may have exposed "for free" that we are *not yet* capturing — surfaced
-    loudly so a human can review and add them, without ever auto-calling them.
+    ``get_*``/``download_*`` methods that are neither in our allowlist, nor in the
+    known plumbing/dangerous sets, nor deliberately suppressed as redundant. The
+    result is a list of endpoints a library upgrade may have exposed "for free"
+    that we are *not yet* capturing — surfaced loudly so a human can review and
+    add them, without ever auto-calling them.
     """
     known = catalog_method_names()
     candidates = {
@@ -240,7 +264,7 @@ def detect_catalog_drift(garmin_cls) -> list[str]:
         for name in dir(garmin_cls)
         if callable(getattr(garmin_cls, name, None)) and _is_readable_candidate(name)
     }
-    return sorted(candidates - known)
+    return sorted(candidates - known - _KNOWN_REDUNDANT)
 
 
 def detect_forbidden_in_catalog() -> list[str]:
