@@ -1,0 +1,52 @@
+# Environment
+.env
+.env.*
+.env.local
+!.env.example
+
+.python-version
+
+# Garmin token store & captured data — NEVER commit
+data/
+tokens/
+garmin-tokens/
+
+# Dependencies
+node_modules/
+vendor/
+__pycache__/
+.venv/
+venv/
+*.py[cod]
+*$py.class
+*.so
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.cache/
+
+# Claude local files
+.claude/settings.local.json
+CLAUDE.local.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Agent workspaces
+.serena/
+
+# OS
+.DS_Store
+Thumbs.db

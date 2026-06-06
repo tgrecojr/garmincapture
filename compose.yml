@@ -1,0 +1,41 @@
+name: garmincapture
+
+services:
+  # Always-on incremental puller. Runs a pull, sleeps POLL_INTERVAL_SECONDS
+  # (default 900 = 15 min), repeats. Stays up; SIGTERM (docker stop) shuts the
+  # loop down cleanly between cycles. `docker exec` in for ad-hoc backfills.
+  garmincapture:
+    build: .
+    image: ghcr.io/tgrecojr/garmincapture:latest
+    env_file:
+      - .env
+    environment:
+      BRONZE_ROOT: /app/data/bronze
+      GARMINTOKENS: /app/data/tokens
+    volumes:
+      # Two independent bind mounts: bronze output and the token store live on
+      # separate host paths. The container targets must match the env vars above.
+      - ./data/bronze:/app/data/bronze
+      - ./data/tokens:/app/data/tokens
+    restart: unless-stopped
+
+  # One-time interactive token bootstrap (first run / MFA). Run with:
+  #   docker compose run --rm bootstrap
+  # It shares the same token volume, so once the token store is written the
+  # unattended `garmincapture` service runs silently.
+  bootstrap:
+    build: .
+    image: ghcr.io/tgrecojr/garmincapture:latest
+    env_file:
+      - .env
+    environment:
+      # Capture disabled during bootstrap: we only want to mint the token store.
+      BRONZE_ROOT: ""
+      GARMINTOKENS: /app/data/tokens
+    volumes:
+      # Bootstrap only mints the token store, so it needs just the tokens mount.
+      - ./data/tokens:/app/data/tokens
+    stdin_open: true
+    tty: true
+    profiles:
+      - bootstrap

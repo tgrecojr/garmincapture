@@ -1,0 +1,115 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":disableRateLimiting",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    "docker:enableMajor",
+    ":timezone(America/New_York)"
+  ],
+  "schedule": [
+    "after 10pm every weekday",
+    "before 5am every weekday",
+    "every weekend"
+  ],
+  "prConcurrentLimit": 3,
+  "prCreation": "immediate",
+  "rebaseWhen": "behind-base-branch",
+  "automerge": true,
+  "platformAutomerge": true,
+  "packageRules": [
+    {
+      "matchCategories": [
+        "docker"
+      ],
+      "pinDigests": true
+    },
+    {
+      "description": "Auto-merge non-major updates for stable images",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "automerge": true,
+      "automergeType": "branch"
+    },
+    {
+      "description": "Group all minor and patch updates together",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch",
+      "automerge": true
+    },
+    {
+      "description": "Disable auto-merge for major updates - need review",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "labels": [
+        "major-update"
+      ]
+    },
+    {
+      "description": "Auto-merge digest updates daily",
+      "matchUpdateTypes": [
+        "digest"
+      ],
+      "automerge": true,
+      "schedule": [
+        "at any time"
+      ],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "Stability period for minor/patch before auto-merge",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Fast-track garminconnect: its releases fix the Garmin auth arms race (Cloudflare/MFA/token-audience), so we track latest with no stability delay. Major still requires review.",
+      "matchManagers": [
+        "pep621"
+      ],
+      "matchPackageNames": [
+        "garminconnect"
+      ],
+      "groupName": null,
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true,
+      "minimumReleaseAge": null,
+      "schedule": [
+        "at any time"
+      ],
+      "labels": [
+        "garmin-auth"
+      ]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 4am on monday"
+    ]
+  }
+}

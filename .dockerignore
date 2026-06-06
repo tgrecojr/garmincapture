@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# Data, tokens, credentials — never bake into the image
+data/
+tokens/
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Docs (keep README for build context cleanliness only)
+*.md
+
+# Tests (not needed in the runtime image)
+tests/
+
+# Tooling / agent dirs
+.claude/
+.serena/
+
+# OS
+.DS_Store
+Thumbs.db

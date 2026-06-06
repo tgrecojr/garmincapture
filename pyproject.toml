@@ -1,0 +1,70 @@
+[project]
+name = "garmincapture"
+version = "0.1.0"
+description = "Thin Garmin Connect raw-capture service that lands the full data surface into the shared bronze layer with no transformation."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "garminconnect>=0.3.5",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv",
+    "structlog>=24.1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=garmincapture",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+markers = [
+    "unit: Unit tests for individual functions and classes",
+    "integration: Integration tests that test multiple components together",
+    "slow: Tests that take a long time to run",
+]
+
+[tool.coverage.run]
+source = ["garmincapture"]
+omit = [
+    "venv/*",
+    ".venv/*",
+    "*/tests/*",
+    "test_*.py",
+    "conftest.py",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
