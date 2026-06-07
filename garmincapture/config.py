@@ -14,6 +14,15 @@ from __future__ import annotations
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Catalog endpoints excluded from capture by default. These are the female-health
+# metrics (menstrual cycle + pregnancy); they return empty for most accounts and
+# are irrelevant to many users, so we don't waste API calls on them. They are NOT
+# removed from the catalog (so ``detect_catalog_drift`` still tracks them) — they
+# are simply not called. To capture them, override the env var:
+#   FETCH_EXCLUDE=""                       -> call everything
+#   FETCH_EXCLUDE="menstrual_day,foo,bar"  -> your own denylist (replaces this one)
+DEFAULT_FETCH_EXCLUDE = "menstrual_day,menstrual_calendar,pregnancy_summary"
+
 
 class Settings(BaseSettings):
     """Runtime configuration parsed from the environment / ``.env``."""
@@ -54,6 +63,10 @@ class Settings(BaseSettings):
     # --- Selection / toggles ----------------------------------------------
     # Comma-separated subset of catalog names; empty => everything in A/B/C.
     fetch_selection: str = Field(default="", alias="FETCH_SELECTION")
+    # Comma-separated catalog names to NEVER call (denylist). Wins over
+    # FETCH_SELECTION. Defaults to the female-health endpoints (see
+    # DEFAULT_FETCH_EXCLUDE); set FETCH_EXCLUDE="" to capture them.
+    fetch_exclude: str = Field(default=DEFAULT_FETCH_EXCLUDE, alias="FETCH_EXCLUDE")
     capture_alt_formats: bool = Field(default=False, alias="CAPTURE_ALT_FORMATS")
 
     # --- Provenance stamping ----------------------------------------------
@@ -80,8 +93,23 @@ class Settings(BaseSettings):
             if name.strip()
         }
 
+    @property
+    def fetch_exclude_set(self) -> set[str]:
+        """Parsed ``FETCH_EXCLUDE`` as a set of catalog names (denylist)."""
+        return {
+            name.strip()
+            for name in self.fetch_exclude.split(",")
+            if name.strip()
+        }
+
     def is_selected(self, name: str) -> bool:
-        """Whether a catalog endpoint ``name`` should run this invocation."""
+        """Whether a catalog endpoint ``name`` should run this invocation.
+
+        Exclusion (``FETCH_EXCLUDE``) always wins over selection
+        (``FETCH_SELECTION``); an empty selection means "everything not excluded".
+        """
+        if name in self.fetch_exclude_set:
+            return False
         selection = self.fetch_selection_set
         return not selection or name in selection
 
