@@ -70,6 +70,19 @@ FIT/original at `raw`).
 See `.env.example`. Required for a real pull: `BRONZE_ROOT`, `GARMINTOKENS`,
 `GARMINCONNECT_EMAIL`, `GARMINCONNECT_BASE64_PASSWORD`. Optional: `LOOKBACK_DAYS`,
 `WEEKLY_WEEKS`, `POLL_INTERVAL_SECONDS`, `RATE_LIMIT_SECONDS`, `FETCH_SELECTION`,
-`CAPTURE_ALT_FORMATS`, `GARMINCONNECT_IS_CN`, `PROCESSOR_VERSION`, `LOG_LEVEL`,
-`LOG_FORMAT`.
+`FETCH_EXCLUDE`, `CAPTURE_ALT_FORMATS`, `GARMINCONNECT_IS_CN`, `PROCESSOR_VERSION`,
+`LOG_LEVEL`, `LOG_FORMAT`.
 (Values are never committed; `.env` is gitignored.)
+
+`FETCH_SELECTION` is an allowlist (empty ⇒ everything); `FETCH_EXCLUDE` is a
+denylist that **wins over** selection. `FETCH_EXCLUDE` defaults to the
+female-health endpoints (`menstrual_day,menstrual_calendar,pregnancy_summary`) so
+they are never called; set `FETCH_EXCLUDE=""` to capture them. These endpoints
+remain in `catalog.py` (so drift detection still tracks them) — they are simply
+not invoked.
+
+Empty (`[]`/`{}`) returns are captured as-is for endpoints without a skip flag
+(e.g. `hrv`, `training_readiness`, `body_battery_events`, `running_tolerance`,
+`goals`): an empty 200 is a faithful "asked, no data" record, and these begin
+populating automatically if a future device produces them. See
+`scripts/probe-empty-endpoints.py` to verify live what a date returns.

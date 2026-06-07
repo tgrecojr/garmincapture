@@ -120,6 +120,27 @@ class TestRunnerEndToEnd:
         assert list(root.glob("garmin/sleep/**/*.json"))
         assert list(root.glob("garmin/floors/**/*.json")) == []
 
+    def test_default_excludes_female_health_calls(self, bronze_settings, mock_client):
+        # Default FETCH_EXCLUDE must prevent these endpoints from being *called*.
+        self._run(bronze_settings, mock_client)
+        assert not mock_client.get_menstrual_data_for_date.called
+        assert not mock_client.get_menstrual_calendar_data.called
+        assert not mock_client.get_pregnancy_summary.called
+        assert mock_client.get_sleep_data.called  # control: others still run
+
+    def test_empty_exclude_restores_female_health_calls(self, bronze_settings, mock_client):
+        from garmincapture.config import Settings
+
+        s = Settings(
+            BRONZE_ROOT=bronze_settings.bronze_root,
+            RATE_LIMIT_SECONDS=0,
+            LOOKBACK_DAYS=2,
+            FETCH_EXCLUDE="",
+        )
+        self._run(s, mock_client)
+        assert mock_client.get_menstrual_data_for_date.called
+        assert mock_client.get_pregnancy_summary.called
+
     def test_per_device_fanout(self, bronze_settings, mock_client):
         self._run(bronze_settings, mock_client)
         root = Path(bronze_settings.bronze_root)

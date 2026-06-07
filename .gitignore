@@ -10,6 +10,9 @@
 data/
 tokens/
 garmin-tokens/
+.garmin-tokens/
+
+scripts/
 
 # Dependencies
 node_modules/
