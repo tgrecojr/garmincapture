@@ -148,3 +148,7 @@ Four workflows mirror the rest of the fleet (`glucose-loader`):
   secret-looking keys before capture; any removal is recorded in the sidecar's
   `redacted_fields` (the one permitted payload modification).
 - No HTTP session tap, so there is no auth-traffic capture risk by construction.
+
+## License
+
+Released under the [MIT License](LICENSE).
